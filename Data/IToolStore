@@ -1,0 +1,8 @@
+namespace Tooltracker.Data;
+public interface IToolStore
+{
+   
+    Task<IEnumerable<Member>> GetAllMemberAsync();
+    Task<Member?> GetMemberByIdAsync(Guid id);
+   
+}
