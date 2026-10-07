@@ -1,33 +1,37 @@
+using ToolTracker.Exceptions;
 namespace ToolTracker.Models;
 
-public class Loan
-{
-    public Guid Id { get; private set;}
-    public Guid ToolId {get; private set;}
-    public Guid MemberId{get; private set;}
-    public decimal Amount{ get; private set;}
-    public DateTime CheckOutDate {get;}
-    public DateTime DueDate{get; private set;}
+public enum LoanStatus { CheckedOut, Returned }
 
-    public Loan(Guid toolId, Guid memberId, decimal amount)
+public sealed class Loan : Entity
+{
+    public Guid ToolId { get; }
+    public Guid BorrowerId { get; }
+    public DateOnly CheckedOutOn { get; }
+    public DateOnly DueOn { get; }
+    public DateOnly? ReturnedOn { get; private set; }
+    public LoanStatus Status { get; private set; }
+
+    private Loan(Guid toolId, Guid borrowerId, DateOnly checkedOutOn, DateOnly dueOn) : base(Guid.NewGuid())
     {
-        if(toolId == Guid.Empty)
-        {
-            throw new ArgumentException("A loan must reference a valid Tool.", nameof(toolId));
-        }
-        if(memberId == Guid.Empty)
-        {
-            throw new ArgumentException("A loan must reference a valid member.", nameof(memberId));
-        }
-        if(amount <= 0)
-        {
-            throw new ArgumentException("A loan amount must greater than zero.", nameof(amount));
-        }
-        Id = Guid.NewGuid();
         ToolId = toolId;
-        MemberId = memberId;
-        Amount = amount;
-        CheckOutDate = DateTime.UtcNow;
-        DueDate = CheckOutDate.AddDays(3);
+        BorrowerId = borrowerId;
+        CheckedOutOn = checkedOutOn;
+        DueOn = dueOn;
+        Status = LoanStatus.CheckedOut;
+    }
+
+    public static Loan Checkout(Guid toolId, Guid borrowerId, DateOnly dueOn, DateOnly today)
+        => new(toolId, borrowerId, today, dueOn);
+
+    public bool IsActive => Status == LoanStatus.CheckedOut;
+    public bool IsOverdue(DateOnly today) => IsActive && today > DueOn;
+
+    public void Return(DateOnly today)
+    {
+        if (!IsActive)
+            throw new ConflictException($"Loan '{Id}' has already been returned.");
+        Status = LoanStatus.Returned;
+        ReturnedOn = today;
     }
 }
